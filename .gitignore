@@ -1,0 +1,2 @@
+# Making sure the linked modules are not pushed to github by mistake
+node_modules

@@ -1,0 +1,11 @@
+<head>
+<script type="text/javascript" src="node_modules/jquery/dist/jquery.min.js"></script>
+</head>
+<body>
+  <button onclick="post()">Post</button>
+  <script>
+  function post() {
+    $.post( "results", { fps: "60", sps: "1000" } );
+  }
+  </script>
+</body>
