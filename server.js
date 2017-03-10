@@ -6,6 +6,16 @@ var qs = require('querystring');
 
 const hostname = '127.0.0.1';
 const port = 1000;
+const resultsFile = 'results.json';
+
+function logNewResults(newResults) {
+    var oldResults = fs.existsSync(resultsFile)
+            ? JSON.parse(fs.readFileSync(resultsFile, 'utf8'))
+            : {},
+        now = (new Date()).toISOString();
+    oldResults[now] = newResults;
+    fs.writeFileSync(resultsFile, JSON.stringify(oldResults, null, ' '));
+}
 
 const server = http.createServer((req, res) => {
   if (req.method === 'POST' && req.url === '/results') {
@@ -23,7 +33,7 @@ const server = http.createServer((req, res) => {
 
     req.on('end', function () {
         var post = qs.parse(body);
-        // use post['blah'], etc.
+        logNewResults(post);
     });
 
   } else {

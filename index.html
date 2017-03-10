@@ -5,7 +5,7 @@
   <button onclick="post()">Post</button>
   <script>
   function post() {
-    $.post( "results", { fps: "60", sps: "1000" } );
+    $.post( "results", { title: document.title, fps: "60", sps: "1000" } );
   }
   </script>
 </body>
