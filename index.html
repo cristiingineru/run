@@ -2,10 +2,194 @@
 <script type="text/javascript" src="node_modules/jquery/dist/jquery.min.js"></script>
 </head>
 <body>
-  <button onclick="post()">Post</button>
   <script>
-  function post() {
-    $.post( "results", { title: document.title, fps: "60", sps: "1000" } );
+
+
+  window.results = window.results || {};
+
+  setInterval(function() {
+    var displayNode = $('div.rafMeter')[0];
+    if (displayNode) {
+      window.results.rafMeter = $('div.rafMeter')[0].innerHTML;
+    }
+  }, 1000);
+
+
+
+
+
+  RAFMeter = function () {
+
+    var meterRafOnOffButton, displayNode, curentTime, curentMozPaintCount,
+        previousTime = Date.now(),
+        previousMozPaintCount = window.mozPaintCount,
+        appRafCallCount = 0,
+        meterRafCallCount = 0,
+        keepRunningMeterRaf = false,
+        displayInterval = 1000,
+        originalRequestAnimationFrame = requestAnimationFrame;
+
+
+    var tickInterval = function() {
+      curentTime = Date.now();
+      curentMozPaintCount = window.mozPaintCount;
+
+      display();
+
+      previousTime = curentTime;
+      previousMozPaintCount = curentMozPaintCount;
+      appRafCallCount = 0;
+      meterRafCallCount = 0;
+    };
+
+
+    var tickRequestAnimationFrame = function() {
+      meterRafCallCount += 1;
+      if (keepRunningMeterRaf) {
+          originalRequestAnimationFrame(tickRequestAnimationFrame);
+      }
+    };
+
+
+    var display = function() {
+      var duration = curentTime - previousTime,
+          appRafCallsPerSec = (1000 * appRafCallCount / duration).toFixed(1),
+          meterRafCallsPerSec = keepRunningMeterRaf ? (1000 * meterRafCallCount / duration).toFixed(1) : NaN,
+          mozFps = 1000 * (curentMozPaintCount - previousMozPaintCount) / duration,
+          browserFps = mozFps.toFixed(1);
+          message = 'spied raf calls / sec: ' + appRafCallsPerSec + '<br />' +
+                    'meter raf calls / sec: ' + meterRafCallsPerSec + '<br />' +
+                    'browser frames / sec: ' + browserFps;
+      if (!displayNode) {
+        displayNode = tryCreateDisplayNode();
+      }
+      if (displayNode) {
+        displayNode.innerHTML = message;
+      }
+    };
+
+
+    var toggleMeterRaf = function() {
+      if(meterRafOnOffButton.checked) {
+          keepRunningMeterRaf = true;
+          originalRequestAnimationFrame(tickRequestAnimationFrame);
+      } else {
+          keepRunningMeterRaf = false;
+      }
+    };
+
+
+    var insertFirst = function(parent, newChild) {
+      if (parent.firstChild) {
+        parent.insertBefore(newChild, parent.firstChild);
+      } else {
+        parent.appendChild(newChild);
+      }
+    };
+
+
+    var tryCreateDisplayNode = function() {
+      var target = document.body, displayNode;
+      if (target) {
+          var view = document.createElement('div');
+          view.className = 'rafMeter';
+
+          meterRafOnOffButton = document.createElement('input');
+          meterRafOnOffButton.type = 'checkbox';
+          meterRafOnOffButton.className = 'rafMeter';
+          meterRafOnOffButton.onclick = toggleMeterRaf;
+
+          var label = document.createElement('label');
+          label.className = 'rafMeter';
+          label.innerHTML = 'schedule meter requestAnimationFrame';
+
+          displayNode = document.createElement('div');
+          displayNode.className = 'rafMeter';
+
+          view.appendChild(meterRafOnOffButton);
+          view.appendChild(label);
+          view.appendChild(displayNode);
+
+          insertFirst(target, view);
+      }
+      return displayNode;
+    };
+
+
+    var fakeRequestAnimationFrame = function(fn) {
+      appRafCallCount += 1;
+      originalRequestAnimationFrame(fn);
+    };
+
+
+    setInterval(tickInterval, displayInterval);
+    requestAnimationFrame = fakeRequestAnimationFrame;
   }
+
+
+  if (typeof exports !== 'undefined' && module.exports) {
+    module.exports = RAFMeter;
+  } else {
+    window.rafMeter = new RAFMeter();
+  }
+
+
+
+  window.results = window.results || {};
+
+  results.title = document.title;
+  results.browser = browser();
+
+  function sendResults() {
+    $.post( "results", results );
+  }
+
+  /**
+   * Gets the browser name or returns an empty string if unknown.
+   * This function also caches the result to provide for any
+   * future calls this function has.
+   * http://stackoverflow.com/questions/9847580/how-to-detect-safari-chrome-ie-firefox-and-opera-browser
+   *
+   * @returns {string}
+   */
+  function browser() {
+      // Return cached result if avalible, else get result then cache it.
+      if (browser.prototype._cachedResult)
+          return browser.prototype._cachedResult;
+
+      // Opera 8.0+
+      var isOpera = (!!window.opr && !!opr.addons) || !!window.opera || navigator.userAgent.indexOf(' OPR/') >= 0;
+
+      // Firefox 1.0+
+      var isFirefox = typeof InstallTrigger !== 'undefined';
+
+      // Safari 3.0+ "[object HTMLElementConstructor]"
+      var isSafari = /constructor/i.test(window.HTMLElement) || (function (p) { return p.toString() === "[object SafariRemoteNotification]"; })(!window['safari'] || safari.pushNotification);
+
+      // Internet Explorer 6-11
+      var isIE = /*@cc_on!@*/false || !!document.documentMode;
+
+      // Edge 20+
+      var isEdge = !isIE && !!window.StyleMedia;
+
+      // Chrome 1+
+      var isChrome = !!window.chrome && !!window.chrome.webstore;
+
+      // Blink engine detection
+      var isBlink = (isChrome || isOpera) && !!window.CSS;
+
+      return
+          isOpera ? 'Opera' :
+          isFirefox ? 'Firefox' :
+          isSafari ? 'Safari' :
+          isChrome ? 'Chrome' :
+          isIE ? 'IE' :
+          isEdge ? 'Edge' :
+          "Don't know";
+  };
+
+
+
   </script>
+  <button onclick="sendResults()">Post</button>
 </body>
